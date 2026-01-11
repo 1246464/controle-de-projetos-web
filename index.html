@@ -9,6 +9,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<!-- Adicionar jsPDF para geração de PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <style>
         * {
             box-sizing: border-box;
@@ -52,6 +55,17 @@
             display: flex;
             gap: 12px;
             align-items: center;
+        }
+        
+        .logo-image {
+            height: 50px;
+            width: auto;
+            max-width: 150px;
+            object-fit: contain;
+            border-radius: 4px;
+            background: white;
+            padding: 4px;
+            display: none; /* Inicialmente oculto */
         }
         
         .logo i {
@@ -1051,12 +1065,283 @@
             justify-content: flex-end;
         }
 
+        /* NOVO: Estilos para o cronograma */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .timeline-phase {
+            position: relative;
+            padding-left: 30px;
+            border-left: 3px solid #2e7d32;
+        }
+
+        .timeline-phase::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2e7d32;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #2e7d32;
+        }
+
+        .timeline-phase-header {
+            background: #e8f5e9;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .timeline-phase-title {
+            font-weight: bold;
+            color: #1b5e20;
+            font-size: 1.1rem;
+        }
+
+        .timeline-phase-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .timeline-tasks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-left: 15px;
+        }
+
+        .timeline-task {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .timeline-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .timeline-task-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timeline-task-dates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .date-card {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .date-card.planned {
+            border-left-color: #4caf50;
+        }
+
+        .date-card.actual {
+            border-left-color: #ff9800;
+        }
+
+        .date-card.completed {
+            border-left-color: #2e7d32;
+        }
+
+        .date-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .date-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timeline-project-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .project-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .project-info-item {
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .project-info-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .project-info-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* NOVO: Estilos para a barra de progresso ponderada */
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            height: 30px;
+            position: relative;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #2e7d32);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .progress-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .progress-weight-info {
+            background-color: #e8f5e9;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .progress-weight-info h4 {
+            color: #2196f3;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .progress-weight-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+        
+        .progress-weight-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 3px solid #4caf50;
+        }
+        
+        .progress-weight-task {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .progress-weight-value {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        /* NOVO: Estilos para o modal do cronograma */
+        #timelineModal .modal-content {
+            max-width: 95%;
+            max-height: 90vh;
+        }
+        
+        .timeline-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .print-timeline-btn {
+            background: #673ab7;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* NOVO: Estilos para modal de logotipo */
+        .logo-modal-content {
+            max-width: 500px;
+        }
+        
+        .logo-preview-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .logo-preview {
+            max-width: 300px;
+            max-height: 150px;
+            object-fit: contain;
+            border: 2px dashed #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .logo-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
     </style>
 </head>
 <body>
 <div class="container">
 <header>
 <div class="logo">
+<img id="logoImage" class="logo-image" alt="Logotipo da Empresa" src="" style="display:none;">
 <i class="fas fa-project-diagram"></i>
 <div>
 <h1 style="font-size:1.2rem;margin-bottom:4px">Controle de Projetos Completo</h1>
@@ -1074,6 +1359,8 @@
 <button class="btn btn-warning" id="syncBtn"><i class="fas fa-sync"></i> Sincronizar</button>
 <button class="btn btn-info" id="showChartsBtn"><i class="fas fa-chart-bar"></i> Gráficos</button>
 <button class="btn btn-info" id="toggleFiltersBtn"><i class="fas fa-filter"></i> Filtros</button>
+<!-- NOVO BOTÃO PARA LOGOTIPO -->
+<button class="btn btn-info" id="loadLogoBtn"><i class="fas fa-image"></i> Logotipo</button>
 </div>
 </header>
 <div class="summary">
@@ -2115,6 +2402,68 @@
 </div>
 </div>
 
+<!-- NOVO MODAL: Cronograma do Projeto -->
+<div class="modal" id="timelineModal">
+    <div class="modal-content">
+        <span class="close" data-close="timelineModal">×</span>
+        <h3 id="timelineModalTitle">Cronograma do Projeto</h3>
+        <div id="timelineProjectInfo" class="timeline-project-info"></div>
+        <div id="timelineContainer" class="timeline-container"></div>
+        <div class="timeline-actions">
+            <button class="btn btn-chart" id="printTimelineBtn" onclick="printTimeline()">
+                <i class="fas fa-print"></i> Imprimir Cronograma
+            </button>
+            <button class="btn btn-chart" id="generatePdfBtn" onclick="handleGeneratePDF()">
+                <i class="fas fa-file-pdf"></i> Gerar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- NOVO MODAL: Configuração do Logotipo -->
+<div class="modal" id="logoModal">
+    <div class="modal-content logo-modal-content">
+        <span class="close" data-close="logoModal">×</span>
+        <h3>Configuração do Logotipo</h3>
+        
+        <div class="form-group">
+            <label for="logoFile">Selecione um arquivo de imagem:</label>
+            <input type="file" id="logoFile" accept="image/*" class="form-control">
+            <small>Formatos suportados: JPG, PNG, GIF, SVG. Tamanho recomendado: 300x150px</small>
+        </div>
+        
+        <div class="logo-preview-container">
+            <img id="logoPreview" class="logo-preview" src="" alt="Pré-visualização do Logotipo">
+        </div>
+        
+        <div class="form-group">
+            <label for="logoSize">Tamanho do Logotipo (px):</label>
+            <input type="range" id="logoSize" min="30" max="150" value="50" class="form-control">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px;">
+                <span>Pequeno</span>
+                <span id="logoSizeValue">50px</span>
+                <span>Grande</span>
+            </div>
+        </div>
+        
+        <div class="logo-controls">
+            <button class="btn btn-danger" id="removeLogoBtn">
+                <i class="fas fa-trash"></i> Remover Logotipo
+            </button>
+            <button class="btn btn-primary" id="saveLogoBtn">
+                <i class="fas fa-save"></i> Salvar Logotipo
+            </button>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; font-size: 0.85rem;">
+            <p><strong>Nota:</strong> O logotipo será exibido no cabeçalho da aplicação e também será incluído automaticamente em todos os PDFs gerados.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Input oculto para carregar logo -->
+<input type="file" id="logoFileInput" accept="image/*" style="display: none;">
+
 <script>
         // ==============================================
         // VARIÁVEIS GLOBAIS
@@ -2150,6 +2499,13 @@
             taskKey: null,
             editingIndex: null
         };
+
+        // Variável para armazenar o ID do projeto do cronograma atual
+        let currentTimelineProjectId = null;
+
+        // Variável para o logotipo
+        let companyLogo = localStorage.getItem('companyLogo') || null;
+        let logoSize = parseInt(localStorage.getItem('logoSize')) || 50;
 
         // ==============================================
         // CORREÇÃO DAS FUNÇÕES DE DATA
@@ -2215,6 +2571,192 @@
             const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             return months[monthIndex];
+        }
+
+        // ==============================================
+        // NOVAS FUNÇÕES PARA LOGOTIPO
+        // ==============================================
+        
+        function initLogo() {
+            const logoImage = document.getElementById('logoImage');
+            if (companyLogo) {
+                logoImage.src = companyLogo;
+                logoImage.style.display = 'block';
+                logoImage.style.height = logoSize + 'px';
+                
+                // Ajustar o tamanho do ícone se o logotipo estiver visível
+                const logoIcon = document.querySelector('.logo i');
+                if (logoIcon) {
+                    logoIcon.style.fontSize = '1.8rem';
+                }
+            } else {
+                logoImage.style.display = 'none';
+            }
+            
+            // Configurar controle de tamanho
+            const logoSizeControl = document.getElementById('logoSize');
+            if (logoSizeControl) {
+                logoSizeControl.value = logoSize;
+                document.getElementById('logoSizeValue').textContent = logoSize + 'px';
+                
+                logoSizeControl.addEventListener('input', function() {
+                    document.getElementById('logoSizeValue').textContent = this.value + 'px';
+                    const preview = document.getElementById('logoPreview');
+                    if (preview && preview.src) {
+                        preview.style.height = this.value + 'px';
+                    }
+                });
+            }
+        }
+        
+        function showLogoModal() {
+            document.getElementById('logoModal').style.display = 'block';
+            
+            // Carregar pré-visualização se existir
+            const preview = document.getElementById('logoPreview');
+            if (companyLogo) {
+                preview.src = companyLogo;
+                preview.style.height = logoSize + 'px';
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+            
+            // Configurar evento para o input de arquivo
+            document.getElementById('logoFile').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const preview = document.getElementById('logoPreview');
+                        preview.src = event.target.result;
+                        preview.style.display = 'block';
+                        preview.style.height = document.getElementById('logoSize').value + 'px';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+        
+        function saveLogo() {
+            const fileInput = document.getElementById('logoFile');
+            const preview = document.getElementById('logoPreview');
+            const sizeControl = document.getElementById('logoSize');
+            
+            // Se não há arquivo selecionado e não há pré-visualização, usar o existente
+            if (!fileInput.files[0] && !preview.src) {
+                if (companyLogo) {
+                    // Apenas atualizar o tamanho
+                    logoSize = parseInt(sizeControl.value);
+                    localStorage.setItem('logoSize', logoSize);
+                    
+                    // Atualizar exibição
+                    const logoImage = document.getElementById('logoImage');
+                    if (logoImage) {
+                        logoImage.style.height = logoSize + 'px';
+                    }
+                    
+                    alert('Tamanho do logotipo atualizado!');
+                    document.getElementById('logoModal').style.display = 'none';
+                } else {
+                    alert('Selecione um arquivo de imagem primeiro.');
+                }
+                return;
+            }
+            
+            // Se há arquivo selecionado
+            if (fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    companyLogo = event.target.result;
+                    logoSize = parseInt(sizeControl.value);
+                    
+                    // Salvar no localStorage
+                    localStorage.setItem('companyLogo', companyLogo);
+                    localStorage.setItem('logoSize', logoSize);
+                    
+                    // Atualizar exibição
+                    const logoImage = document.getElementById('logoImage');
+                    if (logoImage) {
+                        logoImage.src = companyLogo;
+                        logoImage.style.display = 'block';
+                        logoImage.style.height = logoSize + 'px';
+                    }
+                    
+                    // Ajustar o tamanho do ícone
+                    const logoIcon = document.querySelector('.logo i');
+                    if (logoIcon) {
+                        logoIcon.style.fontSize = '1.8rem';
+                    }
+                    
+                    alert('Logotipo salvo com sucesso!');
+                    document.getElementById('logoModal').style.display = 'none';
+                };
+                
+                reader.readAsDataURL(file);
+            } else if (preview.src) {
+                // Usar a pré-visualização existente (caso de edição)
+                companyLogo = preview.src;
+                logoSize = parseInt(sizeControl.value);
+                
+                localStorage.setItem('companyLogo', companyLogo);
+                localStorage.setItem('logoSize', logoSize);
+                
+                // Atualizar exibição
+                const logoImage = document.getElementById('logoImage');
+                if (logoImage) {
+                    logoImage.src = companyLogo;
+                    logoImage.style.display = 'block';
+                    logoImage.style.height = logoSize + 'px';
+                }
+                
+                alert('Logotipo atualizado!');
+                document.getElementById('logoModal').style.display = 'none';
+            }
+        }
+        
+        function removeLogo() {
+            if (confirm('Tem certeza que deseja remover o logotipo?')) {
+                companyLogo = null;
+                localStorage.removeItem('companyLogo');
+                localStorage.removeItem('logoSize');
+                
+                const logoImage = document.getElementById('logoImage');
+                if (logoImage) {
+                    logoImage.style.display = 'none';
+                    logoImage.src = '';
+                }
+                
+                // Restaurar tamanho do ícone
+                const logoIcon = document.querySelector('.logo i');
+                if (logoIcon) {
+                    logoIcon.style.fontSize = '2.2rem';
+                }
+                
+                // Limpar pré-visualização no modal
+                const preview = document.getElementById('logoPreview');
+                if (preview) {
+                    preview.src = '';
+                    preview.style.display = 'none';
+                }
+                
+                alert('Logotipo removido!');
+                document.getElementById('logoModal').style.display = 'none';
+            }
+        }
+
+        // ==============================================
+        // FUNÇÃO AUXILIAR PARA CARREGAR IMAGEM
+        // ==============================================
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
         }
 
         // ==============================================
@@ -2769,6 +3311,7 @@
                     <td class="column-group">
                         <button class="btn btn-primary btn-sm" onclick="editProject(${p.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-chart btn-sm" onclick="showTimeline(${p.id})"><i class="fas fa-calendar-alt"></i> Cronograma</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -2997,6 +3540,607 @@
             if(anyDelayed) return 'Atrasado';
             if(anyInProgress) return 'Em Andamento';
             return 'No Prazo';
+        }
+
+        // ==============================================
+        // FUNÇÃO PARA CALCULAR PROGRESSO PONDERADO
+        // ==============================================
+        function calculateWeightedProjectProgress(project) {
+            // Definir pesos para cada tarefa
+            const taskWeights = {
+                'kom': 1,
+                'ferramental': 3,      // Maior peso
+                'cadBomFt': 2,
+                'tryout': 3,           // Maior peso
+                'entrega': 1,
+                'psw': 1,
+                'handover': 1
+            };
+            
+            let totalWeight = 0;
+            let completedWeight = 0;
+            let inProgressWeight = 0;
+            
+            // Calcular progresso para cada tarefa
+            Object.keys(taskWeights).forEach(taskKey => {
+                const weight = taskWeights[taskKey];
+                const task = project.tasks?.[taskKey];
+                
+                totalWeight += weight;
+                
+                if (task && task.executed) {
+                    // Tarefa concluída: peso completo
+                    completedWeight += weight;
+                } else if (task && task.start) {
+                    // Tarefa em andamento: 50% do peso
+                    inProgressWeight += weight * 0.5;
+                }
+            });
+            
+            // Progresso total (concluído + em andamento)
+            const totalProgress = completedWeight + inProgressWeight;
+            const progressPercentage = totalWeight > 0 ? (totalProgress / totalWeight) * 100 : 0;
+            
+            return {
+                progress: progressPercentage,
+                completedWeight: completedWeight,
+                inProgressWeight: inProgressWeight,
+                totalWeight: totalWeight,
+                details: taskWeights
+            };
+        }
+
+        // ==============================================
+        // FUNÇÃO CORRIGIDA: MOSTRAR CRONOGRAMA DO PROJETO COM BARRA DE PROGRESSO
+        // ==============================================
+        function showTimeline(projectId) {
+            currentTimelineProjectId = projectId;
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            document.getElementById('timelineModalTitle').textContent = `Cronograma - ${project.projectName} (ID: ${project.id})`;
+            
+            // Calcular progresso ponderado
+            const progressData = calculateWeightedProjectProgress(project);
+            
+            // Criar HTML da barra de progresso
+            const progressBarHTML = `
+                <div class="progress-weight-info">
+                    <h4>Progresso Ponderado do Projeto</h4>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: ${progressData.progress}%">
+                            ${progressData.progress.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="progress-bar-labels">
+                        <span>0%</span>
+                        <span>${progressData.progress.toFixed(1)}%</span>
+                        <span>100%</span>
+                    </div>
+                    <p style="text-align: center; margin-top: 8px; font-size: 0.9rem;">
+                        Concluído: ${progressData.completedWeight.toFixed(1)} | Em andamento: ${progressData.inProgressWeight.toFixed(1)} | Total: ${progressData.totalWeight}
+                    </p>
+                    
+                    <div class="progress-weight-list">
+                        <div class="progress-weight-item">
+                            <span class="progress-weight-task">KOM</span>
+                            <span class="progress-weight-value">Peso: 1</span>
+                        </div>
+                        <div class="progress-weight-item" style="border-left-color: #2196f3;">
+                            <span class="progress-weight-task">Ferramental</span>
+                            <span class="progress-weight-value">Peso: 3 (Maior)</span>
+                        </div>
+                        <div class="progress-weight-item">
+                            <span class="progress-weight-task">CAD+BOM+FT</span>
+                            <span class="progress-weight-value">Peso: 2</span>
+                        </div>
+                        <div class="progress-weight-item" style="border-left-color: #2196f3;">
+                            <span class="progress-weight-task">Try-out</span>
+                            <span class="progress-weight-value">Peso: 3 (Maior)</span>
+                        </div>
+                        <div class="progress-weight-item">
+                            <span class="progress-weight-task">Entrega</span>
+                            <span class="progress-weight-value">Peso: 1</span>
+                        </div>
+                        <div class="progress-weight-item">
+                            <span class="progress-weight-task">PSW</span>
+                            <span class="progress-weight-value">Peso: 1</span>
+                        </div>
+                        <div class="progress-weight-item">
+                            <span class="progress-weight-task">Handover</span>
+                            <span class="progress-weight-value">Peso: 1</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Informações do projeto
+            const projectInfoHTML = `
+                <div class="project-info-grid">
+                    <div class="project-info-item">
+                        <div class="project-info-label">Cliente</div>
+                        <div class="project-info-value">${project.cliente || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Código</div>
+                        <div class="project-info-value">${project.codigo || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Segmento</div>
+                        <div class="project-info-value">${project.segmento || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Líder</div>
+                        <div class="project-info-value">${project.projectLeader || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Modelo</div>
+                        <div class="project-info-value">${project.modelo || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Processo</div>
+                        <div class="project-info-value">${project.processo || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Fase</div>
+                        <div class="project-info-value">${project.fase || '-'}</div>
+                    </div>
+                    <div class="project-info-item">
+                        <div class="project-info-label">Status do Projeto</div>
+                        <div class="project-info-value">
+                            <span class="status status-${project.status.toLowerCase().replace(/\s/g, '-')}">
+                                ${project.status}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Combinar barra de progresso com informações do projeto
+            document.getElementById('timelineProjectInfo').innerHTML = progressBarHTML + projectInfoHTML;
+            
+            // Cronograma das tarefas
+            const timelineContainer = document.getElementById('timelineContainer');
+            timelineContainer.innerHTML = '';
+            
+            // Tarefas do projeto
+            const taskKeys = ['kom', 'ferramental', 'cadBomFt', 'tryout', 'entrega', 'psw', 'handover'];
+            const taskNames = {
+                'kom': 'KOM - Kick-off Meeting',
+                'ferramental': 'Ferramental - Desenvolvimento e preparação',
+                'cadBomFt': 'CAD+BOM+FT - Projeto CAD, Lista de Materiais e Folha de Tempos',
+                'tryout': 'TRY-OUT - Testes e ajustes dos ferramentais',
+                'entrega': 'ENTREGA - Entrega do projeto',
+                'psw': 'PSW - Part Submission Warrant',
+                'handover': 'HANDOVER - Transferência do projeto'
+            };
+            
+            // Criar o cronograma
+            taskKeys.forEach((taskKey, index) => {
+                const task = project.tasks?.[taskKey];
+                if (!task) return;
+                
+                const taskStatus = calculateTaskStatus(task, project.status);
+                const taskWeight = progressData.details[taskKey] || 1;
+                
+                const timelinePhase = document.createElement('div');
+                timelinePhase.className = 'timeline-phase';
+                
+                const timelinePhaseHeader = document.createElement('div');
+                timelinePhaseHeader.className = 'timeline-phase-header';
+                timelinePhaseHeader.innerHTML = `
+                    <div class="timeline-phase-title">${taskNames[taskKey]} <small>(Peso: ${taskWeight})</small></div>
+                    <div class="timeline-phase-subtitle">
+                        Status: <span class="status status-${taskStatus.toLowerCase().replace(/\s/g, '-')}">${taskStatus}</span>
+                    </div>
+                `;
+                
+                const timelineTasks = document.createElement('div');
+                timelineTasks.className = 'timeline-tasks';
+                
+                const timelineTask = document.createElement('div');
+                timelineTask.className = 'timeline-task';
+                
+                // Datas da tarefa
+                const datesHTML = `
+                    <div class="timeline-task-header">
+                        <div class="timeline-task-name">${taskKey.toUpperCase()}</div>
+                    </div>
+                    <div class="timeline-task-dates">
+                        ${task.planned ? `
+                        <div class="date-card planned">
+                            <div class="date-label">Planejado</div>
+                            <div class="date-value">${formatDateBR(task.planned)}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${task.start ? `
+                        <div class="date-card actual">
+                            <div class="date-label">Início Real</div>
+                            <div class="date-value">${formatDateBR(task.start)}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${task.executed ? `
+                        <div class="date-card completed">
+                            <div class="date-label">Conclusão</div>
+                            <div class="date-value">${formatDateBR(task.executed)}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${!task.executed && task.planned ? `
+                        <div class="date-card">
+                            <div class="date-label">Situação</div>
+                            <div class="date-value">
+                                ${compareDates(today(), toDateOnly(task.planned)) > 0 ? 'Atrasado' : 'No Prazo'}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                timelineTask.innerHTML = datesHTML;
+                timelineTasks.appendChild(timelineTask);
+                
+                timelinePhase.appendChild(timelinePhaseHeader);
+                timelinePhase.appendChild(timelineTasks);
+                timelineContainer.appendChild(timelinePhase);
+            });
+            
+            // Abrir o modal
+            document.getElementById('timelineModal').style.display = 'block';
+        }
+
+        // ==============================================
+        // FUNÇÃO: IMPRIMIR CRONOGRAMA
+        // ==============================================
+        function printTimeline() {
+            const projectId = currentTimelineProjectId;
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                alert('Nenhum projeto selecionado para imprimir.');
+                return;
+            }
+
+            const printContent = document.getElementById('timelineModal').innerHTML;
+            const originalContent = document.body.innerHTML;
+            
+            document.body.innerHTML = `
+                <html>
+                    <head>
+                        <title>Cronograma do Projeto</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; }
+                            .timeline-container { margin-top: 20px; }
+                            .timeline-phase { margin-bottom: 30px; border-left: 3px solid #2e7d32; padding-left: 20px; }
+                            .timeline-phase-header { background: #f0f9f0; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+                            .timeline-task { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 10px; }
+                            .date-card { background: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 5px; }
+                            .project-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+                            .project-info-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+                            .status { padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+                            .status-concluído { background: #4caf50; color: white; }
+                            .status-em-andamento { background: #2196f3; color: white; }
+                            .status-atrasado { background: #f44336; color: white; }
+                            .status-no-prazo { background: #4caf50; color: white; }
+                            .status-pendente { background: #ff9800; color: white; }
+                            @media print {
+                                .no-print { display: none !important; }
+                                button { display: none !important; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                    </body>
+                </html>
+            `;
+            
+            window.print();
+            document.body.innerHTML = originalContent;
+            updateProjectsTable();
+        }
+
+        // ==============================================
+        // FUNÇÃO: GERAR PDF DO CRONOGRAMA COM LOGOTIPO PROPORCIONAL
+        // ==============================================
+        async function generateTimelinePDF() {
+            const projectId = currentTimelineProjectId;
+            if (!projectId) {
+                alert('Nenhum projeto selecionado para gerar o PDF.');
+                return;
+            }
+            
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                alert(`Projeto com ID ${projectId} não encontrado.`);
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Configurações da página
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            const contentWidth = pageWidth - 2 * margin;
+            let yPos = margin;
+            
+            // Função para verificar se precisa de nova página
+            function checkPageHeight(neededHeight) {
+                if (yPos + neededHeight > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                    return true;
+                }
+                return false;
+            }
+            
+            // Cabeçalho do PDF com logotipo proporcional
+            if (companyLogo) {
+                try {
+                    const img = await loadImage(companyLogo);
+                    
+                    const maxWidth = 40;
+                    const maxHeight = 15;
+                    
+                    let logoWidth = img.width;
+                    let logoHeight = img.height;
+                    
+                    const ratio = logoWidth / logoHeight;
+                    
+                    if (logoWidth > maxWidth) {
+                        logoWidth = maxWidth;
+                        logoHeight = logoWidth / ratio;
+                    }
+                    
+                    if (logoHeight > maxHeight) {
+                        logoHeight = maxHeight;
+                        logoWidth = logoHeight * ratio;
+                    }
+                    
+                    if (logoWidth < 20) {
+                        logoWidth = 20;
+                        logoHeight = logoWidth / ratio;
+                    }
+                    
+                    if (logoHeight < 10) {
+                        logoHeight = 10;
+                        logoWidth = logoHeight * ratio;
+                    }
+                    
+                    doc.addImage(companyLogo, 'PNG', margin, yPos, logoWidth, logoHeight);
+                    
+                    yPos += logoHeight + 5;
+                } catch (e) {
+                    console.warn('Não foi possível adicionar o logotipo ao PDF:', e);
+                    yPos += 5;
+                }
+            } else {
+                yPos += 5;
+            }
+            
+            // Título do PDF
+            doc.setFontSize(20);
+            doc.setTextColor(46, 125, 50);
+            doc.text("Cronograma do Projeto", pageWidth / 2, yPos, { align: 'center' });
+            yPos += 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Projeto: ${project.projectName}`, margin, yPos);
+            yPos += 6;
+            doc.text(`ID: ${project.id} | Cliente: ${project.cliente || '-'}`, margin, yPos);
+            yPos += 6;
+            doc.text(`Segmento: ${project.segmento || '-'} | Líder: ${project.projectLeader || '-'}`, margin, yPos);
+            yPos += 6;
+            doc.text(`Status: ${project.status}`, margin, yPos);
+            yPos += 10;
+            
+            // Calcular progresso
+            const progressData = calculateWeightedProjectProgress(project);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Progresso Ponderado: ${progressData.progress.toFixed(1)}%`, margin, yPos);
+            yPos += 5;
+            
+            // Barra de progresso
+            const progressBarWidth = contentWidth;
+            const progressBarHeight = 8;
+            const progressBarX = margin;
+            const progressBarY = yPos;
+            
+            doc.setFillColor(224, 224, 224);
+            doc.rect(progressBarX, progressBarY, progressBarWidth, progressBarHeight, 'F');
+            
+            const progressWidth = (progressData.progress / 100) * progressBarWidth;
+            doc.setFillColor(76, 175, 80);
+            doc.rect(progressBarX, progressBarY, progressWidth, progressBarHeight, 'F');
+            
+            doc.setFontSize(8);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`${progressData.progress.toFixed(1)}%`, progressBarX + progressBarWidth / 2, progressBarY + progressBarHeight / 2 + 1, { align: 'center' });
+            
+            yPos += progressBarHeight + 8;
+            
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Concluído: ${progressData.completedWeight.toFixed(1)} | Em andamento: ${progressData.inProgressWeight.toFixed(1)} | Total: ${progressData.totalWeight}`, margin, yPos);
+            yPos += 5;
+            
+            doc.text("Pesos: KOM(1) | Ferramental(3) | CAD+BOM+FT(2) | Try-out(3) | Entrega(1) | PSW(1) | Handover(1)", margin, yPos);
+            yPos += 10;
+            
+            doc.setDrawColor(46, 125, 50);
+            doc.setLineWidth(0.5);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 10;
+            
+            // Informações do projeto
+            const projectInfo = [
+                ['Código', project.codigo || '-'],
+                ['Modelo', project.modelo || '-'],
+                ['Processo', project.processo || '-'],
+                ['Fase', project.fase || '-']
+            ];
+            
+            const cellHeight = 8;
+            const colWidth = contentWidth / 2;
+            
+            projectInfo.forEach(([label, value], index) => {
+                if (checkPageHeight(cellHeight + 2)) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+                }
+                
+                const x = margin + (index % 2) * colWidth;
+                const y = yPos + Math.floor(index / 2) * cellHeight;
+                
+                doc.setFillColor(240, 248, 240);
+                doc.rect(x, y, colWidth, cellHeight, 'F');
+                
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(label, x + 2, y + 5);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text(value, x + colWidth / 2, y + 5, { align: 'center' });
+            });
+            
+            yPos += Math.ceil(projectInfo.length / 2) * cellHeight + 10;
+            
+            // Tarefas do projeto
+            const taskKeys = ['kom', 'ferramental', 'cadBomFt', 'tryout', 'entrega', 'psw', 'handover'];
+            const taskNames = {
+                'kom': 'KOM - Kick-off Meeting',
+                'ferramental': 'Ferramental - Desenvolvimento e preparação',
+                'cadBomFt': 'CAD+BOM+FT - Projeto CAD, Lista de Materiais e Folha de Tempos',
+                'tryout': 'TRY-OUT - Testes e ajustes dos ferramentais',
+                'entrega': 'ENTREGA - Entrega do projeto',
+                'psw': 'PSW - Part Submission Warrant',
+                'handover': 'HANDOVER - Transferência do projeto'
+            };
+            
+            const taskWeights = {
+                'kom': 1,
+                'ferramental': 3,
+                'cadBomFt': 2,
+                'tryout': 3,
+                'entrega': 1,
+                'psw': 1,
+                'handover': 1
+            };
+            
+            const statusColors = {
+                'Concluído': [76, 175, 80],
+                'Em Andamento': [33, 150, 243],
+                'Atrasado': [244, 67, 54],
+                'No Prazo': [76, 175, 80],
+                'Pendente': [255, 152, 0],
+                'Em Espera': [255, 152, 0],
+                'Cancelado': [158, 158, 158]
+            };
+            
+            taskKeys.forEach((taskKey, index) => {
+                const task = project.tasks?.[taskKey];
+                if (!task) return;
+                
+                const taskStatus = calculateTaskStatus(task, project.status);
+                const statusColor = statusColors[taskStatus] || [100, 100, 100];
+                const taskWeight = taskWeights[taskKey] || 1;
+                
+                if (checkPageHeight(40)) {
+                    doc.setDrawColor(46, 125, 50);
+                    doc.setLineWidth(0.5);
+                    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+                }
+                
+                doc.setFillColor(232, 245, 233);
+                doc.rect(margin, yPos, contentWidth, 12, 'F');
+                
+                doc.setFontSize(11);
+                doc.setTextColor(27, 94, 32);
+                doc.setFont(undefined, 'bold');
+                doc.text(`${index + 1}. ${taskNames[taskKey]}`, margin + 5, yPos + 8);
+                
+                doc.setFontSize(9);
+                doc.setTextColor(33, 150, 243);
+                doc.text(`Peso: ${taskWeight}`, margin + contentWidth - 40, yPos + 8);
+                
+                doc.setFillColor(...statusColor);
+                doc.rect(pageWidth - margin - 40, yPos + 2, 40, 8, 'F');
+                
+                doc.setFontSize(8);
+                doc.setTextColor(255, 255, 255);
+                doc.text(taskStatus.toUpperCase(), pageWidth - margin - 20, yPos + 7, { align: 'center' });
+                
+                yPos += 15;
+                
+                const dateInfo = [];
+                if (task.planned) dateInfo.push(['Planejado', formatDateBR(task.planned)]);
+                if (task.start) dateInfo.push(['Início', formatDateBR(task.start)]);
+                if (task.executed) dateInfo.push(['Conclusão', formatDateBR(task.executed)]);
+                
+                if (dateInfo.length > 0) {
+                    const dateColWidth = contentWidth / dateInfo.length;
+                    
+                    dateInfo.forEach(([label, value], i) => {
+                        const x = margin + i * dateColWidth;
+                        
+                        doc.setFillColor(245, 245, 245);
+                        doc.rect(x, yPos, dateColWidth, 20, 'F');
+                        
+                        doc.setDrawColor(200, 200, 200);
+                        doc.rect(x, yPos, dateColWidth, 20);
+                        
+                        doc.setFontSize(8);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text(label, x + dateColWidth / 2, yPos + 7, { align: 'center' });
+                        
+                        doc.setFontSize(10);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont(undefined, 'bold');
+                        doc.text(value, x + dateColWidth / 2, yPos + 15, { align: 'center' });
+                    });
+                    
+                    yPos += 25;
+                }
+                
+                yPos += 5;
+                
+                if (index < taskKeys.length - 1) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.3);
+                    doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+                }
+            });
+            
+            // Rodapé
+            const footerY = pageHeight - 10;
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 
+                    margin, footerY);
+            doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth - margin, footerY, { align: 'right' });
+            
+            // Salvar PDF
+            const fileName = `cronograma_${project.projectName.replace(/[^a-z0-9]/gi, '_')}_${project.id}.pdf`;
+            doc.save(fileName);
+        }
+
+        // ==============================================
+        // FUNÇÃO DE MANIPULAÇÃO DO PDF (para lidar com async)
+        // ==============================================
+        async function handleGeneratePDF() {
+            try {
+                await generateTimelinePDF();
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                alert('Erro ao gerar PDF. Verifique o console para mais detalhes.');
+            }
         }
 
         // ==============================================
@@ -5135,6 +6279,17 @@
                 plugins: [ChartDataLabels]
             });
         }
+
+        // ==============================================
+        // EVENT LISTENERS PARA LOGOTIPO
+        // ==============================================
+        document.getElementById('loadLogoBtn').addEventListener('click', showLogoModal);
+        document.getElementById('saveLogoBtn').addEventListener('click', saveLogo);
+        document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
+        
+        // Inicializar logotipo ao carregar a página
+        initLogo();
+
     </script>
 </body>
 </html>
