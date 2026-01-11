@@ -1,6 +1,6 @@
 <?php
 // Arquivo central de conexão com o banco
-$DB_HOST = "127.0.0.2";
+$DB_HOST = "127.0.0.1";
 $DB_USER = "root";
 $DB_PASS = "59380204Mm@";
 $DB_NAME = "gestao_projetos";

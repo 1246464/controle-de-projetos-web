@@ -2553,19 +2553,35 @@
         }
 
         function deleteProjectOnServer(id){
+            console.log('[deleteProjectOnServer] Iniciando delete para ID:', id);
+            
             try{
+                const payload = JSON.stringify({ id });
+                console.log('[deleteProjectOnServer] Payload:', payload);
+                
                 fetch('delete_project.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id })
-                }).then(r=>r.json()).then(resp=>{
+                    body: payload
+                }).then(r=>{
+                    console.log('[deleteProjectOnServer] Response status:', r.status);
+                    return r.json();
+                }).then(resp=>{
+                    console.log('[deleteProjectOnServer] Response JSON:', resp);
                     if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
-                        console.log('Projeto removido no servidor');
+                        console.log('[deleteProjectOnServer] SUCESSO - Projeto removido no servidor:', resp);
                     }else{
-                        console.warn('Resposta delete_project.php inesperada', resp);
+                        console.error('[deleteProjectOnServer] ERRO - Resposta inesperada:', resp);
+                        alert('Erro ao deletar no banco: ' + (resp?.msg || 'Erro desconhecido'));
                     }
-                }).catch(e=>console.warn('Erro ao deletar projeto no servidor', e));
-            }catch(e){ console.warn(e); }
+                }).catch(e=>{
+                    console.error('[deleteProjectOnServer] ERRO ao processar resposta:', e);
+                    alert('Erro de comunicação ao deletar: ' + e.message);
+                });
+            }catch(e){ 
+                console.error('[deleteProjectOnServer] ERRO fatal:', e);
+                alert('Erro fatal ao deletar: ' + e.message);
+            }
         }
 
         // ==============================================
@@ -3259,12 +3275,20 @@
 
         function deleteProject(id){
             if(confirm('Tem certeza que deseja excluir este projeto?')){
+                // Remover localmente primeiro
                 projects = projects.filter(p=>p.id!==id);
                 saveToLocalStorage();
                 clearProjectForm();
                 updateProjectsTable();
                 updateSummary();
-                try{ deleteProjectOnServer(id); }catch(e){ console.warn(e); }
+                
+                // Enviar delete ao servidor
+                try{ 
+                    deleteProjectOnServer(id); 
+                }catch(e){ 
+                    console.error('Erro ao deletar projeto no servidor:', e);
+                    alert('Projeto removido localmente, mas houve erro ao sincronizar com o servidor');
+                }
             }
         }
 
@@ -3298,12 +3322,45 @@
             document.getElementById('leadersForm').reset();
         }
 
+        function deleteLeaderOnServer(id){
+            console.log('[deleteLeaderOnServer] Iniciando delete para ID:', id);
+            
+            try{
+                const payload = JSON.stringify({ id });
+                console.log('[deleteLeaderOnServer] Payload:', payload);
+                
+                fetch('delete_leader.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload
+                }).then(r=>{
+                    console.log('[deleteLeaderOnServer] Response status:', r.status);
+                    return r.json();
+                }).then(resp=>{
+                    console.log('[deleteLeaderOnServer] Response JSON:', resp);
+                    if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
+                        console.log('[deleteLeaderOnServer] SUCESSO - Líder removido no servidor:', resp);
+                    }else{
+                        console.error('[deleteLeaderOnServer] ERRO - Resposta inesperada:', resp);
+                        alert('Erro ao deletar líder no banco: ' + (resp?.msg || 'Erro desconhecido'));
+                    }
+                }).catch(e=>{
+                    console.error('[deleteLeaderOnServer] ERRO ao processar resposta:', e);
+                    alert('Erro de comunicação ao deletar líder: ' + e.message);
+                });
+            }catch(e){ 
+                console.error('[deleteLeaderOnServer] ERRO fatal:', e);
+                alert('Erro fatal ao deletar líder: ' + e.message);
+            }
+        }
+
         function deleteLeader(id){
             if(projects.some(p=>p.leaderId==id)){
                 alert('Não é possível excluir este líder pois existem projetos associados a ele.');
                 return;
             }
             if(confirm('Tem certeza que deseja excluir este líder?')){
+                console.log('[deleteLeader] Deletando líder ID:', id);
                 leaders = leaders.filter(l=>l.id!==id);
                 saveToLocalStorage();
                 clearProjectForm();
@@ -3311,6 +3368,14 @@
                 updateTaskLeaderFilter();
                 updateProjectLeaderSelect();
                 updateLeadersList();
+                
+                // Enviar delete ao servidor
+                try{ 
+                    deleteLeaderOnServer(id); 
+                }catch(e){ 
+                    console.error('Erro ao deletar líder no servidor:', e);
+                    alert('Líder removido localmente, mas houve erro ao sincronizar com o servidor');
+                }
             }
         }
 
@@ -3474,32 +3539,43 @@
 
         // Histórico and replanejamento
         function openRescheduleModal(projectId, taskKey){
-            const project = projects.find(p=>p.id===projectId);
+            const project = projects.find(p=>p.id==projectId);
             if(!project) return;
             const task = project.tasks?.[taskKey];
             currentRescheduleInfo = {projectId, taskKey};
             document.getElementById('rescheduleTaskInfo').textContent = `Replanejar: ${taskKey.toUpperCase()} - ${project.projectName}`;
-            document.getElementById('currentDate').value = formatDateBR(task?.planned) || 'Não definida';
+            document.getElementById('currentDate').value = (task && task.planned) ? formatDateBR(task.planned) : 'Não definida';
             document.getElementById('newDate').value = toISODateString(task?.planned);
             document.getElementById('rescheduleReason').value = '';
             document.getElementById('rescheduleModal').style.display = 'block';
         }
 
         function saveReschedule(){
-            if(!currentRescheduleInfo) return;
+            console.log('[saveReschedule] INÍCIO');
+            if(!currentRescheduleInfo) {
+                console.log('[saveReschedule] ERRO: currentRescheduleInfo não definido');
+                return;
+            }
             const {projectId, taskKey} = currentRescheduleInfo;
+            console.log('[saveReschedule] ProjectID:', projectId, 'TaskKey:', taskKey);
             
             // CORREÇÃO: Usar toISODateString para garantir formato correto
             const newDate = toISODateString(document.getElementById('newDate').value);
             const reason = document.getElementById('rescheduleReason').value.trim();
+            console.log('[saveReschedule] NewDate:', newDate, 'Reason:', reason);
 
             if(!newDate || !reason){
                 alert('Preencha a nova data e o motivo do replanejamento.');
                 return;
             }
 
-            const project = projects.find(p => p.id === projectId);
-            if(!project) return;
+            const project = projects.find(p => p.id == projectId);
+            if(!project) {
+                console.log('[saveReschedule] ERRO: Projeto não encontrado');
+                return;
+            }
+            console.log('[saveReschedule] Projeto encontrado:', project.projectName);
+            
             if(!project.tasks) project.tasks = {};
             if(!project.tasks[taskKey]) project.tasks[taskKey] = {};
             
@@ -3511,21 +3587,37 @@
                 oldDate: project.tasks[taskKey].planned,
                 newDate: newDate
             });
+            console.log('[saveReschedule] Histórico atualizado, total de itens:', project.tasks[taskKey].history.length);
 
             // Atualizar data planejada
             project.tasks[taskKey].planned = newDate;
+            console.log('[saveReschedule] Data planejada atualizada para:', newDate);
             
             // Recalcular status apenas se o projeto não estiver em modo manual
             if (!project.manualStatus) {
                 project.status = calculateProjectStatus(project);
+                console.log('[saveReschedule] Status recalculado:', project.status);
             }
             
             saveToLocalStorage();
+            console.log('[saveReschedule] Dados salvos no localStorage');
+            
+            // ENVIAR ATUALIZAÇÃO AO SERVIDOR
+            console.log('[saveReschedule] Enviando atualização ao servidor...');
+            try {
+                pushProjectToServer(project);
+                console.log('[saveReschedule] pushProjectToServer chamado');
+            } catch(e) {
+                console.error('[saveReschedule] ERRO ao chamar pushProjectToServer:', e);
+                alert('Replanejamento salvo localmente, mas houve erro ao sincronizar com o servidor');
+            }
+            
             clearProjectForm();
             updateProjectsTable();
             updateSummary();
             document.getElementById('rescheduleModal').style.display = 'none';
             currentRescheduleInfo = null;
+            console.log('[saveReschedule] CONCLUÍDO');
         }
 
         // ==============================================
