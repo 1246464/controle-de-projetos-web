@@ -225,6 +225,8 @@
         }
         
         .btn {
+             background: #673ab7;
+            color: #fff;
             padding: 10px 16px;
             border: none;
             border-radius: 8px;
@@ -1333,6 +1335,29 @@
             gap: 10px;
             justify-content: center;
             margin-top: 20px;
+        }
+
+        /* Animações para notificação de atualização automática */
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
         }
 
     </style>
@@ -2507,6 +2532,11 @@
         let companyLogo = localStorage.getItem('companyLogo') || null;
         let logoSize = parseInt(localStorage.getItem('logoSize')) || 50;
 
+        // Variáveis para atualização automática em tempo real
+        let lastKnownUpdate = null;
+        let autoUpdateInterval = null;
+        let isCheckingUpdates = false;
+
         // ==============================================
         // CORREÇÃO DAS FUNÇÕES DE DATA
         // ==============================================
@@ -3028,6 +3058,84 @@
         }
 
         // ==============================================
+        // SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA EM TEMPO REAL
+        // ==============================================
+        
+        async function checkForUpdates() {
+            if (isCheckingUpdates) return;
+            isCheckingUpdates = true;
+            
+            try {
+                const res = await fetch('check_updates.php', { cache: 'no-store' });
+                if (!res.ok) throw new Error('Erro ao verificar atualizações');
+                
+                const data = await res.json();
+                
+                if (data.status === 'sucesso' && data.last_update) {
+                    // Se é a primeira verificação, apenas armazenar o timestamp
+                    if (lastKnownUpdate === null) {
+                        lastKnownUpdate = data.last_update;
+                    } 
+                    // Se houve mudança, recarregar dados
+                    else if (data.last_update !== lastKnownUpdate) {
+                        console.log('🔄 Atualização detectada! Recarregando dados...');
+                        lastKnownUpdate = data.last_update;
+                        await atualizarDadosDoBanco();
+                        
+                        // Mostrar notificação visual
+                        showUpdateNotification();
+                    }
+                }
+            } catch (err) {
+                console.warn('Erro ao verificar atualizações:', err);
+            } finally {
+                isCheckingUpdates = false;
+            }
+        }
+        
+        function showUpdateNotification() {
+            // Criar elemento de notificação
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 500;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = '✓ Dados atualizados automaticamente!';
+            
+            document.body.appendChild(notification);
+            
+            // Remover após 3 segundos
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        function startAutoUpdate() {
+            // Verificar atualizações a cada 3 segundos
+            if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+            autoUpdateInterval = setInterval(checkForUpdates, 3000);
+            console.log('✓ Sistema de atualização automática ativado (verificando a cada 3s)');
+        }
+        
+        function stopAutoUpdate() {
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+                autoUpdateInterval = null;
+                console.log('⏸ Sistema de atualização automática pausado');
+            }
+        }
+
+        // ==============================================
         // INTEGRAÇÃO COM O BACKEND (PHP / MySQL)
         // ==============================================
         async function atualizarDadosDoBanco(){
@@ -3071,6 +3179,8 @@
                 }).then(r=>r.json()).then(resp=>{
                     if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
                         console.log('Projeto salvo no servidor');
+                        // Forçar verificação imediata de atualizações para atualizar lastKnownUpdate
+                        setTimeout(() => checkForUpdates(), 500);
                     }else{
                         console.warn('Resposta salvar_projeto.php inesperada', resp);
                     }
@@ -3087,6 +3197,8 @@
                 }).then(r=>r.json()).then(resp=>{
                     if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
                         console.log('Líder salvo no servidor');
+                        // Forçar verificação imediata de atualizações para atualizar lastKnownUpdate
+                        setTimeout(() => checkForUpdates(), 500);
                     }else{
                         console.warn('Resposta salvar_lider.php inesperada', resp);
                     }
@@ -3112,6 +3224,8 @@
                     console.log('[deleteProjectOnServer] Response JSON:', resp);
                     if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
                         console.log('[deleteProjectOnServer] SUCESSO - Projeto removido no servidor:', resp);
+                        // Forçar verificação imediata de atualizações para atualizar lastKnownUpdate
+                        setTimeout(() => checkForUpdates(), 500);
                     }else{
                         console.error('[deleteProjectOnServer] ERRO - Resposta inesperada:', resp);
                         alert('Erro ao deletar no banco: ' + (resp?.msg || 'Erro desconhecido'));
@@ -4484,6 +4598,8 @@
                     console.log('[deleteLeaderOnServer] Response JSON:', resp);
                     if(resp && resp.status && (resp.status === 'sucesso' || resp.status === 'ok')){
                         console.log('[deleteLeaderOnServer] SUCESSO - Líder removido no servidor:', resp);
+                        // Forçar verificação imediata de atualizações para atualizar lastKnownUpdate
+                        setTimeout(() => checkForUpdates(), 500);
                     }else{
                         console.error('[deleteLeaderOnServer] ERRO - Resposta inesperada:', resp);
                         alert('Erro ao deletar líder no banco: ' + (resp?.msg || 'Erro desconhecido'));
@@ -4649,6 +4765,7 @@
             }
             
             saveToLocalStorage();
+            pushProjectToServer(project); // Enviar para o banco de dados
             renderHistoryList();
             
             // Limpar formulário
@@ -4671,6 +4788,7 @@
             task.history.splice(index, 1);
             
             saveToLocalStorage();
+            pushProjectToServer(project); // Enviar para o banco de dados
             renderHistoryList();
             
             // Atualizar badge do histórico na tabela principal
@@ -5705,6 +5823,12 @@
                 countFilteredProjectsByTask();
                 // Carregar dados do banco em background (DB é fonte primária)
                 setTimeout(()=>{ atualizarDadosDoBanco(); }, 500);
+                
+                // Iniciar sistema de atualização automática em tempo real
+                setTimeout(()=>{ 
+                    startAutoUpdate(); 
+                    console.log('🔄 Sistema de sincronização em tempo real ativado!');
+                }, 2000);
             } catch (error) {
                 console.error('Error initializing app:', error);
                 alert('Erro ao inicializar a aplicação: ' + error.message);
